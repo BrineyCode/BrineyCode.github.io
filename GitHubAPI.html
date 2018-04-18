@@ -1,0 +1,250 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>GitHub API</title>
+    <!--JQUERY -->
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <!--BOOTSTRAP -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous" />
+    <!--FONTAWESOME-->
+    <script defer src="https://use.fontawesome.com/releases/v5.0.10/js/all.js" integrity="sha384-slN8GvtUJGnv6ca26v8EzVaR9DC58QEwsIk9q1QXdCU8Yu8ck/tL/5szYlBbqmS+" crossorigin="anonymous"></script>
+
+    <script>
+        //Global
+        var username = "";
+
+        $(document).ready(function () {
+            Events();
+        });
+
+        function Events() {
+            $("#Search").click(function () {
+                UserInformationGet();
+            });
+
+            //Allow form to be submit by pressing the enter key from the textbox
+            $("#GitHubUsername").keypress(function (event) {
+                if (event.which == 13) {
+                    //Remove default action of enter key in a textbox.
+                    //In my experience this was submitting the form and causing a
+                    //page refresh thus not allowing my submit button event below to fire.
+                    event.preventDefault();
+
+                    //Simulate clicking the Submit button
+                    $("#Search").click();
+                }
+            });
+
+        }
+
+        function UserInformationGet() {
+            username = $('#GitHubUsername').val();
+
+            var UserInformationUrl = 'https://api.github.com/users/' + username;
+
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                url: UserInformationUrl,
+                success: function (response) {
+                    var html = '';
+
+                    //Clear Content
+                    $("#UserGitHubDetail").empty();
+
+                    //Populate Data
+                    html += '<div id="UserCard">';
+                    html += '  <div class="row">';
+                    html += '    <div id="UsernamePhoto" class="col-md-3">';
+                    html += '      <a href="https://github.com/' + response.login + '" target="_blank"><img src="' + response.avatar_url + '" width="175" height="175" alt="' + response.login + '" title="Go to profile"></a>';
+                    html += '    </div>';
+                    html += '    <div id="UsernameContent" class="col-md-9">';
+                    html += '      <h2>' + response.login + '<span>(@<a href="https://github.com/' + response.login + '" target="_blank" title="Go to profile">' + response.login + '</a>)</span></h2>';
+                    html += '      <div class="followers">';
+                    html += '        <div class="row">';
+                    html += '          <div class="col-md-2 userCardLabel">Followers:</div>';
+                    html += '          <div id="FollowersContent" class="col-md-10">' + response.followers + '</div>';
+                    html += '        </div>';
+                    html += '      </div>';
+                    html += '      <div class="following">';
+                    html += '        <div class="row">';
+                    html += '          <div class="col-md-2 userCardLabel">Following:</div>';
+                    html += '          <div id="FollowingContent" class="col-md-10">' + response.following + '</div>';
+                    html += '        </div>';
+                    html += '      </div>';
+                    html += '      <div class="totalRepositories">';
+                    html += '        <div class="row">';
+                    html += '          <div class="col-md-2 userCardLabel">Total Repos:</div>';
+                    html += '          <div id="TotalRepositoryContent" class="col-md-10">' + response.public_repos + '</div>';
+                    html += '        </div>';
+                    html += '      </div>';
+                    html += '      <div class="repositoryList">';
+                    html += '        <div class="row">';
+                    html += '          <div class="col-md-2 userCardLabel">Repos List:</div>';
+                    html += '          <div class="col-md-10" id="RepositoryListContent"></div>';
+                    html += '        </div>';
+                    html += '      </div>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '</div>';
+
+                    //Load Data To Page
+                    $("#UserGitHubDetail").append(html);
+
+                    UserRepoGet();
+
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    var html = '';
+
+                    //Clear Content
+                    $("#UserGitHubDetail").empty();
+
+                    html += '<div class="alert alert-danger" role="alert">';
+                    html += '    There is no data to display for this user. Please be sure that a valid Username was entered.';
+                    html += '</div>';
+
+                    //Load Data To Page
+                    $("#UserGitHubDetail").append(html);
+
+                    console.log("UserInformationGet " + xhr.status);
+                    console.log("UserInformationGet " + thrownError);
+                }
+            });
+        }
+
+        function UserRepoGet() {
+            var UserRepoUrl = 'https://api.github.com/users/' + username + '/repos';
+
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                url: UserRepoUrl,
+                success: function (response) {
+                    var html = '';
+                    console.log(response);
+
+                    //Clear Content
+                    $("#RepositoryListContent").empty();
+
+                    if (response.length > 0) {
+                        html += '<ul>';
+
+                        //Populate Data
+                        $.each(response, function (index) {
+                            html += '<li class="badge badge-pill badge-primary"><a href="' + response[index].html_url + '" target="_blank" title="Go to repo">' + response[index].name + '</a></li>';
+                        });
+
+                        html += '</ul>';
+                    }
+                    else {
+                        html += '<div class="alert alert-warning" role="alert">';
+                        html += '    There is no data to display for this user. It appears that this user does not currently have any repos to view.';
+                        html += '</div>';
+                    }
+
+                    //Load Data To Page
+                    $("#RepositoryListContent").append(html);
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    console.log("UserRepoGet " + xhr.status);
+                    console.log("UserRepoGet " + thrownError);
+                }
+            });
+        }
+    </script>
+
+    <style>
+        .userCardLabel {
+            font-weight: bold;
+        }
+
+        .badge-primary {
+            margin-right: 5px;
+        }
+
+            .badge-primary a {
+                color: white;
+            }
+
+        #RepositoryListContent ul {
+            display: inline;
+            padding-left: 0px;
+            padding-right: 10px;
+        }
+
+        #UsernameContent span {
+            font-size: 18px;
+            padding-left: 10px;
+        }
+
+        #UserCard {
+            border: 1px solid lightgray;
+            padding: 10px;
+        }
+
+        #UsernamePhoto {
+            text-align: center;
+        }
+
+            #UsernamePhoto a img {
+                border-radius: 50%;
+            }
+
+        .navbarTitle {
+            color: white;
+            text-align: center;
+            width: 100%;
+        }
+
+            .navbarTitle .title {
+                font-size: 30px;
+                margin-left: 10px;
+            }
+
+        .navbar {
+            margin-bottom: 30px;
+        }
+
+        .usernameLabel {
+            text-align: right;
+            font-weight: bold;
+        }
+
+        .userInput {
+            margin-bottom: 30px;
+        }
+
+        .alert-danger {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <form>
+        <nav class="navbar navbar-dark bg-primary">
+            <div class="navbarTitle"><i class="fab fa-github fa-2x"></i><span class="title">GitHub API</span></div>
+        </nav>
+
+        <div class="container">
+            <div class="form-group row justify-content-center userInput">
+                <div class="alert alert-info">Please enter one GitHub Username at a time to view account detail.</div>
+            </div>
+
+            <div class="form-group row justify-content-center userInput">
+                <label for="GitHubUsername" class="col-md-3 col-form-label usernameLabel">GitHub Username:</label>
+                <div class="col-md-4">
+                    <input class="form-control" type="text" placeholder="GitHub Username" id="GitHubUsername">
+                </div>
+                <div class="col-md-3">
+                    <button type="button" class="btn btn-primary" id="Search">Search</button>
+                </div>
+            </div>
+
+            <div id="UserGitHubDetail"></div>
+        </div>
+    </form>
+</body>
+</html>
